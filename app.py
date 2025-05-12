@@ -34,32 +34,43 @@ def download_model_from_onedrive(url, destination):
     st.info("Downloading model from OneDrive...")
     
     try:
-        # Convert OneDrive link to direct download link
-        if "1drv.ms" in url:
-            response = requests.get(url, allow_redirects=True)
-            file_url = response.url.replace("redir", "download")
-        else:
-            file_url = url
+        # Try a different approach for OneDrive
+        import re
+        session = requests.Session()
         
-        # Download the file
-        response = requests.get(file_url, stream=True)
-        if response.status_code == 200:
-            with open(destination, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            
-            # Validate the file is a PyTorch model
+        # Get the share page URL
+        response = session.get(url, allow_redirects=True)
+        share_url = response.url
+        
+        # Try various download URL patterns
+        download_urls = [
+            share_url.replace("redir", "download"),
+            share_url.replace("view.aspx", "download.aspx"),
+            f"{share_url}&download=1"
+        ]
+        
+        success = False
+        for download_url in download_urls:
             try:
-                # Try to load the first few bytes to check if it's a valid file
-                with open(destination, 'rb') as f:
-                    header = f.read(10)
-                
-                st.success(f"Model downloaded successfully to: {destination}")
-            except Exception as file_error:
-                st.warning(f"Note about file: {str(file_error)}")
-        else:
-            st.error(f"Failed to download model. Status code: {response.status_code}")
-            raise FileNotFoundError(f"HTTP error: {response.status_code}")
+                st.info(f"Trying download URL: {download_url}")
+                response = session.get(download_url, stream=True)
+                if response.status_code == 200:
+                    with open(destination, 'wb') as f:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                    
+                    # Check file size - should be at least 100KB for a model
+                    if os.path.getsize(destination) > 100000:
+                        st.success(f"Model downloaded successfully to: {destination}")
+                        success = True
+                        break
+            except Exception:
+                continue
+        
+        if not success:
+            st.error("Failed to download a valid model file")
+            raise FileNotFoundError("Could not download valid model file")
+            
     except Exception as e:
         st.error(f"Error downloading model: {str(e)}")
         raise
@@ -79,35 +90,44 @@ pretrained_model = "facebook/wav2vec2-large"
 model = Wav2VecIntent(num_classes=num_classes, pretrained_model=pretrained_model).to(device)
 
 try:
-    try:
-        # Standard loading
-        state_dict = torch.load(MODEL_PATH, map_location=device)
-        if isinstance(state_dict, dict):
-            # Clean any corrupted keys
-            clean_state_dict = {k.strip('\r\n') if isinstance(k, str) else k: v for k, v in state_dict.items()}
-            model.load_state_dict(clean_state_dict, strict=False)
-            st.success("Model loaded successfully!")
-        else:
-            # If state_dict is not a dictionary, it might be the full model
-            model = state_dict
-            st.success("Full model loaded successfully!")
-    except Exception as e:
-        st.warning(f"Standard loading failed: {str(e)}")
+    # First, check if the model file exists and has a reasonable size
+    if os.path.exists(MODEL_PATH) and os.path.getsize(MODEL_PATH) > 100000:
         try:
-            # Try JIT loading
-            st.info("Trying alternative loading method...")
-            jit_model = torch.jit.load(MODEL_PATH, map_location=device)
-            model = jit_model
-            st.success("Model loaded with JIT!")
-        except Exception as e2:
-            st.warning(f"JIT loading failed: {str(e2)}")
-            st.info("Using base pre-trained model")
+            # Try standard loading with error handling for corrupt keys
+            try:
+                state_dict = torch.load(MODEL_PATH, map_location=device)
+                if isinstance(state_dict, dict):
+                    # Clean any corrupted keys
+                    clean_state_dict = {k.strip('\r\n') if isinstance(k, str) else k: v for k, v in state_dict.items()}
+                    model.load_state_dict(clean_state_dict, strict=False)
+                    st.success("Model loaded successfully!")
+                else:
+                    # If state_dict is not a dictionary, it might be the full model
+                    model = state_dict
+                    st.success("Full model loaded successfully!")
+            except Exception as e:
+                st.warning(f"Standard loading failed: {str(e)}")
+                try:
+                    # Try JIT loading
+                    st.info("Trying alternative loading method...")
+                    jit_model = torch.jit.load(MODEL_PATH, map_location=device)
+                    model = jit_model
+                    st.success("Model loaded with JIT!")
+                except Exception as e2:
+                    st.warning(f"JIT loading failed: {str(e2)}")
+                    raise
+        except Exception:
+            # Fall back to base model
+            st.info("Using base pre-trained Wav2Vec2 model without custom weights")
+    else:
+        st.info("Using base pre-trained Wav2Vec2 model")
     
     # Ensure model is in eval mode
     model.eval()
 except Exception as e:
-    st.error(f"Failed to initialize the model: {str(e)}")
-    st.stop()
+    st.warning(f"Model initialization note: {str(e)}")
+    st.info("Proceeding with base pre-trained model")
+    model.eval()
 
 # === Streamlit App ===
 st.title("🎙️ Speech Intent Recognition (Microphone + Upload)")
