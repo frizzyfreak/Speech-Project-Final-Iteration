@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import tempfile
 import torch
-import torchaudio  # <== Use torchaudio instead of pydub
+import torchaudio
 import os
 import gdown
 from models.model_wav2vec import Wav2VecIntent  # Import your custom model class
@@ -23,6 +23,8 @@ def download_model_from_drive(file_id, destination):
         except Exception as e:
             st.error(f"Failed to download the model: {str(e)}")
             raise FileNotFoundError("Model file could not be downloaded. Please check the Google Drive link or permissions.")
+    else:
+        st.success(f"Model already exists at {destination}")
 
 # Download the model if it doesn't exist
 try:
@@ -31,15 +33,22 @@ except FileNotFoundError as e:
     st.error("The model file could not be downloaded. Please ensure the Google Drive link is valid and publicly accessible.")
     st.stop()
 
+# Verify the path to the model
+if not os.path.exists(MODEL_PATH):
+    st.error(f"Model file not found at {MODEL_PATH}. Please check the file path.")
+    st.stop()
+
 # Load the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 31
 pretrained_model = "facebook/wav2vec2-large"
 model = Wav2VecIntent(num_classes=num_classes, pretrained_model=pretrained_model).to(device)
+
 try:
     state_dict = torch.load(MODEL_PATH, map_location=device)
     model.load_state_dict(state_dict)
     model.eval()
+    st.success(f"Model loaded successfully from {MODEL_PATH}")
 except Exception as e:
     st.error(f"Failed to load the model: {str(e)}")
     st.stop()
@@ -78,18 +87,26 @@ def predict_intent(audio_waveform):
         predicted_label = index_to_label.get(predicted_class, "Unknown Class")
     return predicted_label
 
-# Upload button
-uploaded_file = st.file_uploader("Upload an audio file", type=["wav", "mp3"])
-if uploaded_file is not None:
-    # Save the uploaded file to a temporary location
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
-        temp_audio_file.write(uploaded_file.read())
-        temp_audio_file_path = temp_audio_file.name
+# Use microphone input instead of file upload
+import sounddevice as sd
+import numpy as np
 
+st.write("Recording audio using microphone...")
+
+# Function to record audio from the microphone
+def record_audio(duration=5, sample_rate=16000):
+    st.info(f"Recording audio for {duration} seconds...")
+    recording = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='int16')
+    sd.wait()  # Wait until the recording is finished
+    return torch.from_numpy(recording).float()
+
+# Record audio on button click
+if st.button("Start Recording"):
+    audio_waveform = record_audio(duration=5)  # 5 seconds of audio
+    st.audio(audio_waveform.numpy(), format="audio/wav")
+    
     try:
-        audio_waveform, sample_rate = torchaudio.load(temp_audio_file_path)
-        audio_waveform = preprocess_audio(audio_waveform, sample_rate)
-
+        # Preprocess and predict intent
         prediction = predict_intent(audio_waveform)
         st.success(f"Predicted Command: {prediction}")
     except Exception as e:
