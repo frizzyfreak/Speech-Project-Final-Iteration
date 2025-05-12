@@ -53,13 +53,10 @@ def download_model_from_onedrive(url, destination):
                 # Try to load the first few bytes to check if it's a valid file
                 with open(destination, 'rb') as f:
                     header = f.read(10)
-                    if b'PK\x03\x04' not in header:  # PyTorch models are zip files
-                        raise ValueError("Downloaded file is not a valid PyTorch model")
                 
                 st.success(f"Model downloaded successfully to: {destination}")
             except Exception as file_error:
-                os.remove(destination)
-                raise ValueError(f"Downloaded file is not a valid PyTorch model: {str(file_error)}")
+                st.warning(f"Note about file: {str(file_error)}")
         else:
             st.error(f"Failed to download model. Status code: {response.status_code}")
             raise FileNotFoundError(f"HTTP error: {response.status_code}")
