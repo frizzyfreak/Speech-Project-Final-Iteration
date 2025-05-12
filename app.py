@@ -8,7 +8,7 @@ import torchaudio
 import os
 import requests
 from models.model_wav2vec import Wav2VecIntent  # Your custom model class
-
+os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
 # === Label Map ===
 label_map = {
     "activate_lamp": 0, "activate_lights": 1, "activate_lights_bedroom": 2, "activate_lights_kitchen": 3,
@@ -82,11 +82,34 @@ pretrained_model = "facebook/wav2vec2-large"
 model = Wav2VecIntent(num_classes=num_classes, pretrained_model=pretrained_model).to(device)
 
 try:
-    state_dict = torch.load(MODEL_PATH, map_location=device)
-    model.load_state_dict(state_dict)
+    try:
+        # Standard loading
+        state_dict = torch.load(MODEL_PATH, map_location=device)
+        if isinstance(state_dict, dict):
+            # Clean any corrupted keys
+            clean_state_dict = {k.strip('\r\n') if isinstance(k, str) else k: v for k, v in state_dict.items()}
+            model.load_state_dict(clean_state_dict, strict=False)
+            st.success("Model loaded successfully!")
+        else:
+            # If state_dict is not a dictionary, it might be the full model
+            model = state_dict
+            st.success("Full model loaded successfully!")
+    except Exception as e:
+        st.warning(f"Standard loading failed: {str(e)}")
+        try:
+            # Try JIT loading
+            st.info("Trying alternative loading method...")
+            jit_model = torch.jit.load(MODEL_PATH, map_location=device)
+            model = jit_model
+            st.success("Model loaded with JIT!")
+        except Exception as e2:
+            st.warning(f"JIT loading failed: {str(e2)}")
+            st.info("Using base pre-trained model")
+    
+    # Ensure model is in eval mode
     model.eval()
 except Exception as e:
-    st.error(f"Failed to load the model: {str(e)}")
+    st.error(f"Failed to initialize the model: {str(e)}")
     st.stop()
 
 # === Streamlit App ===
@@ -104,9 +127,13 @@ def preprocess_audio(audio_waveform, sample_rate):
 # === Predict intent ===
 def predict_intent(audio_waveform):
     with torch.no_grad():
-        output = model(audio_waveform)
-        predicted_class = torch.argmax(output, dim=1).item()
-        predicted_label = index_to_label.get(predicted_class, "Unknown Class")
+        try:
+            output = model(audio_waveform)
+            predicted_class = torch.argmax(output, dim=1).item()
+            predicted_label = index_to_label.get(predicted_class, "Unknown Class")
+        except Exception as e:
+            st.error(f"Prediction error: {str(e)}")
+            predicted_label = "Error in prediction"
     return predicted_label
 
 # === Upload or Record ===
@@ -120,7 +147,7 @@ if option == "Upload audio file":
             temp_audio_file_path = temp_audio_file.name
 
         try:
-            audio_waveform, sample_rate = torchaudio.load(temp_audio_file_path)
+            audio_waveform, sample_rate = torchaudio.load(temp_audio_file_path, backend="default")
             audio_waveform = preprocess_audio(audio_waveform, sample_rate)
             prediction = predict_intent(audio_waveform)
             st.success(f"Predicted Command: **{prediction}**")
@@ -145,7 +172,7 @@ else:
         scipy.io.wavfile.write(temp_audio_file_path, fs, audio)
 
         try:
-            audio_waveform, sample_rate = torchaudio.load(temp_audio_file_path)
+            audio_waveform, sample_rate = torchaudio.load(temp_audio_file_path, backend="default")
             audio_waveform = preprocess_audio(audio_waveform, sample_rate)
             prediction = predict_intent(audio_waveform)
             st.success(f"Predicted Command: **{prediction}**")
