@@ -1,57 +1,13 @@
 import streamlit as st
-import numpy as np
-import tempfile
 import torch
 import torchaudio
 import os
-import gdown
-from models.model_wav2vec import Wav2VecIntent  # Import your custom model class
+import requests
+from models.model_wav2vec import Wav2VecIntent  # Your custom model
 
-# Google Drive file ID for the model
-FILE_ID = "1vBjvOY9Ko1aJiWxjj8fCHwJAh2X5gs5n"
+# ----- CONFIG -----
+ONEDRIVE_LINK = "https://1drv.ms/u/c/758381408c57efa8/Efpm5WOByIBEreOl02sgnhcBWf9AMXrryl4a1DudWnSSgQ?e=c7JuQy"
 MODEL_PATH = "checkpoints11/wav2vec/wav2vec_best_model.pt"
-
-# Function to download the model from Google Drive
-def download_model_from_drive(file_id, destination):
-    if not os.path.exists(destination):
-        os.makedirs(os.path.dirname(destination), exist_ok=True)
-        url = f"https://drive.google.com/uc?id={file_id}"
-        st.info("Downloading model from Google Drive...")
-        try:
-            gdown.download(url, destination, quiet=False)
-            st.success("Model downloaded successfully!")
-        except Exception as e:
-            st.error(f"Failed to download the model: {str(e)}")
-            raise FileNotFoundError("Model file could not be downloaded. Please check the Google Drive link or permissions.")
-    else:
-        st.success(f"Model already exists at {destination}")
-
-# Download the model if it doesn't exist
-try:
-    download_model_from_drive(FILE_ID, MODEL_PATH)
-except FileNotFoundError as e:
-    st.error("The model file could not be downloaded. Please ensure the Google Drive link is valid and publicly accessible.")
-    st.stop()
-
-# Verify the path to the model
-if not os.path.exists(MODEL_PATH):
-    st.error(f"Model file not found at {MODEL_PATH}. Please check the file path.")
-    st.stop()
-
-# Load the model
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-num_classes = 31
-pretrained_model = "facebook/wav2vec2-large"
-model = Wav2VecIntent(num_classes=num_classes, pretrained_model=pretrained_model).to(device)
-
-try:
-    state_dict = torch.load(MODEL_PATH, map_location=device)
-    model.load_state_dict(state_dict)
-    model.eval()
-    st.success(f"Model loaded successfully from {MODEL_PATH}")
-except Exception as e:
-    st.error(f"Failed to load the model: {str(e)}")
-    st.stop()
 
 # Embedded label map
 label_map = {
@@ -66,48 +22,86 @@ label_map = {
 }
 index_to_label = {v: k for k, v in label_map.items()}
 
-st.title("Speech Intent Recognition")
-st.write("Upload an audio file to predict the command.")
 
-# Function to preprocess audio
-def preprocess_audio(audio_waveform, sample_rate):
+# ----- FUNCTIONS -----
+def download_model_from_onedrive(url, destination):
+    """Download model from OneDrive shared link"""
+    if not os.path.exists(destination):
+        os.makedirs(os.path.dirname(destination), exist_ok=True)
+        st.info("Downloading model from OneDrive... (may take a few minutes)")
+        try:
+            response = requests.get(url, allow_redirects=True, stream=True)
+            response.raise_for_status()
+            with open(destination, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            st.success("Model downloaded successfully!")
+        except requests.exceptions.RequestException as e:
+            st.error(f"Failed to download the model: {str(e)}")
+            raise FileNotFoundError("Model file could not be downloaded. Please check the OneDrive link.")
+
+
+def preprocess_audio(audio_waveform, sample_rate, device):
+    """Resample and mono-channel the audio"""
     if sample_rate != 16000:
         resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)
         audio_waveform = resampler(audio_waveform)
-    # Convert stereo to mono if needed
     if audio_waveform.shape[0] > 1:
         audio_waveform = torch.mean(audio_waveform, dim=0, keepdim=True)
     return audio_waveform.to(device)
 
-# Function to predict intent
-def predict_intent(audio_waveform):
+
+def predict_intent(audio_waveform, model, index_to_label):
+    """Run model inference"""
     with torch.no_grad():
         output = model(audio_waveform)
         predicted_class = torch.argmax(output, dim=1).item()
         predicted_label = index_to_label.get(predicted_class, "Unknown Class")
     return predicted_label
 
-# Use microphone input instead of file upload
-import sounddevice as sd
-import numpy as np
 
-st.write("Recording audio using microphone...")
+# ----- STREAMLIT APP -----
+st.set_page_config(page_title="Speech Intent Recognition", page_icon="🎙️")
+st.title("🎙️ Speech Intent Recognition from Microphone")
 
-# Function to record audio from the microphone
-def record_audio(duration=5, sample_rate=16000):
-    st.info(f"Recording audio for {duration} seconds...")
-    recording = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='int16')
-    sd.wait()  # Wait until the recording is finished
-    return torch.from_numpy(recording).float()
+# Step 1: Download model (if needed)
+try:
+    download_model_from_onedrive(ONEDRIVE_LINK, MODEL_PATH)
+except FileNotFoundError:
+    st.stop()
 
-# Record audio on button click
-if st.button("Start Recording"):
-    audio_waveform = record_audio(duration=5)  # 5 seconds of audio
-    st.audio(audio_waveform.numpy(), format="audio/wav")
-    
+# Step 2: Load model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+num_classes = 31
+pretrained_model = "facebook/wav2vec2-large"
+model = Wav2VecIntent(num_classes=num_classes, pretrained_model=pretrained_model).to(device)
+
+try:
+    state_dict = torch.load(MODEL_PATH, map_location=device)
+    model.load_state_dict(state_dict)
+    model.eval()
+except Exception as e:
+    st.error(f"Failed to load the model: {str(e)}")
+    st.stop()
+
+# Step 3: Microphone recorder
+st.info("Record your command (5-10 sec recommended). Click 'Start Recording' and 'Stop'.")
+
+audio_bytes = st.audio_recorder("🎙️ Record Audio", format="audio/wav")
+
+if audio_bytes is not None:
+    st.success("Audio recorded! Processing...")
+
     try:
-        # Preprocess and predict intent
-        prediction = predict_intent(audio_waveform)
-        st.success(f"Predicted Command: {prediction}")
+        # Save to temp file and load
+        with open("temp_recording.wav", "wb") as f:
+            f.write(audio_bytes)
+
+        audio_waveform, sample_rate = torchaudio.load("temp_recording.wav")
+        audio_waveform = preprocess_audio(audio_waveform, sample_rate, device)
+
+        prediction = predict_intent(audio_waveform, model, index_to_label)
+        st.success(f"✅ Predicted Command: **{prediction}**")
+
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"Error processing audio: {str(e)}")
