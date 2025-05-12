@@ -9,7 +9,7 @@ from models.model_wav2vec import Wav2VecIntent  # Import your custom model class
 
 # Google Drive file ID for the model
 FILE_ID = "1vBjvOY9Ko1aJiWxjj8fCHwJAh2X5gs5n"
-MODEL_PATH = "checkpoints11\wav2vec\wav2vec_best_model.pt"
+MODEL_PATH = "checkpoints11/wav2vec/wav2vec_best_model.pt"
 
 # Function to download the model from Google Drive
 def download_model_from_drive(file_id, destination):
