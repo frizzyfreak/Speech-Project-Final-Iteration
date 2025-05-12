@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
-import sounddevice as sd
-import soundfile as sf
+from pydub import AudioSegment
+from pydub.playback import play
 import tempfile
 import torch
 import torch.nn.functional as F
@@ -71,15 +71,7 @@ label_map = {
 index_to_label = {v: k for k, v in label_map.items()}
 
 st.title("Speech Intent Recognition")
-st.write("Speak into your microphone to predict the command.")
-
-# Function to record audio
-def record_audio(duration=5, sample_rate=16000):
-    st.info(f"Listening for {duration} seconds...")
-    audio = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype="float32")
-    sd.wait()  # Wait until recording is finished
-    st.success("Recording complete!")
-    return np.squeeze(audio), sample_rate
+st.write("Upload an audio file to predict the command.")
 
 # Function to preprocess audio
 def preprocess_audio(audio, sample_rate=16000):
@@ -96,19 +88,23 @@ def predict_intent(audio_waveform):
         predicted_label = index_to_label.get(predicted_class, "Unknown Class")
     return predicted_label
 
-# Record button
-if st.button("Listen"):
-    audio, sample_rate = record_audio()
+# Upload button
+uploaded_file = st.file_uploader("Upload an audio file", type=["wav", "mp3"])
+if uploaded_file is not None:
+    # Save the uploaded file to a temporary location
+    with tempfile.NamedTemporaryFile(delete=False) as temp_audio_file:
+        temp_audio_file.write(uploaded_file.read())
+        temp_audio_file_path = temp_audio_file.name
 
-    # Save the audio to a temporary file
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio_file:
-        sf.write(temp_audio_file.name, audio, sample_rate)
-        st.audio(temp_audio_file.name, format="audio/wav")
+    # Load the audio file
+    audio = AudioSegment.from_file(temp_audio_file_path)
+    audio = audio.set_frame_rate(16000).set_channels(1)  # Ensure 16kHz mono audio
+    audio_samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
 
-        # Preprocess the audio and predict intent
-        try:
-            audio_waveform = preprocess_audio(audio, sample_rate)
-            prediction = predict_intent(audio_waveform)
-            st.success(f"Predicted Command: {prediction}")
-        except Exception as e:
-            st.error(f"Error: {str(e)}")
+    # Preprocess the audio and predict intent
+    try:
+        audio_waveform = preprocess_audio(audio_samples, sample_rate=16000)
+        prediction = predict_intent(audio_waveform)
+        st.success(f"Predicted Command: {prediction}")
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
