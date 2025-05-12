@@ -6,6 +6,7 @@ import tempfile
 import torch
 import torchaudio
 import os
+import requests
 from models.model_wav2vec import Wav2VecIntent  # Your custom model class
 
 # === Label Map ===
@@ -21,8 +22,51 @@ label_map = {
 }
 index_to_label = {v: k for k, v in label_map.items()}
 
-# === Load model ===
+# === Model Configuration ===
 MODEL_PATH = "checkpoints11/wav2vec/wav2vec_best_model.pt"
+ONEDRIVE_URL = "https://1drv.ms/u/c/758381408c57efa8/Efpm5WOByIBEreOl02sgnhcBWf9AMXrryl4a1DudWnSSgQ?e=upGwOb"
+
+# Function to download the model from OneDrive
+def download_model_from_onedrive(url, destination):
+    if not os.path.exists(os.path.dirname(destination)):
+        os.makedirs(os.path.dirname(destination), exist_ok=True)
+    
+    st.info("Downloading model from OneDrive...")
+    
+    try:
+        # Convert OneDrive link to direct download link
+        # This approach may need adjustments based on OneDrive's URL structure
+        if "1drv.ms" in url:
+            # Get the response from the URL which will redirect
+            response = requests.get(url, allow_redirects=True)
+            # Extract the actual file URL
+            file_url = response.url.replace("redir", "download")
+        else:
+            file_url = url
+        
+        # Download the file
+        response = requests.get(file_url, stream=True)
+        if response.status_code == 200:
+            with open(destination, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            st.success(f"Model downloaded successfully to: {destination}")
+        else:
+            st.error(f"Failed to download model. Status code: {response.status_code}")
+            raise FileNotFoundError(f"HTTP error: {response.status_code}")
+    except Exception as e:
+        st.error(f"Error downloading model: {str(e)}")
+        raise
+
+# Download the model if it doesn't exist
+if not os.path.exists(MODEL_PATH):
+    try:
+        download_model_from_onedrive(ONEDRIVE_URL, MODEL_PATH)
+    except Exception as e:
+        st.error(f"Failed to download the model: {str(e)}")
+        st.stop()
+
+# Load the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 31
 pretrained_model = "facebook/wav2vec2-large"
