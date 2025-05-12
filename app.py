@@ -1,10 +1,8 @@
 import streamlit as st
 import numpy as np
 from pydub import AudioSegment
-from pydub.playback import play
 import tempfile
 import torch
-import torch.nn.functional as F
 import os
 import gdown
 from models.model_wav2vec import Wav2VecIntent  # Import your custom model class
@@ -19,20 +17,32 @@ def download_model_from_drive(file_id, destination):
         os.makedirs(os.path.dirname(destination), exist_ok=True)
         url = f"https://drive.google.com/uc?id={file_id}"
         st.info("Downloading model from Google Drive...")
-        gdown.download(url, destination, quiet=False)
-        st.success("Model downloaded successfully!")
+        try:
+            gdown.download(url, destination, quiet=False)
+            st.success("Model downloaded successfully!")
+        except Exception as e:
+            st.error(f"Failed to download the model: {str(e)}")
+            raise FileNotFoundError("Model file could not be downloaded. Please check the Google Drive link or permissions.")
 
 # Download the model if it doesn't exist
-download_model_from_drive(FILE_ID, MODEL_PATH)
+try:
+    download_model_from_drive(FILE_ID, MODEL_PATH)
+except FileNotFoundError as e:
+    st.error("The model file could not be downloaded. Please ensure the Google Drive link is valid and publicly accessible.")
+    st.stop()
 
 # Load the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_classes = 31
 pretrained_model = "facebook/wav2vec2-large"
 model = Wav2VecIntent(num_classes=num_classes, pretrained_model=pretrained_model).to(device)
-state_dict = torch.load(MODEL_PATH, map_location=device)
-model.load_state_dict(state_dict)
-model.eval()
+try:
+    state_dict = torch.load(MODEL_PATH, map_location=device)
+    model.load_state_dict(state_dict)
+    model.eval()
+except Exception as e:
+    st.error(f"Failed to load the model: {str(e)}")
+    st.stop()
 
 # Embedded label map
 label_map = {
