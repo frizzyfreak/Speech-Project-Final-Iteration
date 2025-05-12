@@ -1,8 +1,8 @@
 import streamlit as st
 import numpy as np
-from pydub import AudioSegment
 import tempfile
 import torch
+import torchaudio  # <== Use torchaudio instead of pydub
 import os
 import gdown
 from models.model_wav2vec import Wav2VecIntent  # Import your custom model class
@@ -46,37 +46,14 @@ except Exception as e:
 
 # Embedded label map
 label_map = {
-    "activate_lamp": 0,
-    "activate_lights": 1,
-    "activate_lights_bedroom": 2,
-    "activate_lights_kitchen": 3,
-    "activate_lights_washroom": 4,
-    "activate_music": 5,
-    "bring_juice": 6,
-    "bring_newspaper": 7,
-    "bring_shoes": 8,
-    "bring_socks": 9,
-    "change language_Chinese": 10,
-    "change language_English": 11,
-    "change language_German": 12,
-    "change language_Korean": 13,
-    "change language_none": 14,
-    "deactivate_lamp": 15,
-    "deactivate_lights": 16,
-    "deactivate_lights_bedroom": 17,
-    "deactivate_lights_kitchen": 18,
-    "deactivate_lights_washroom": 19,
-    "deactivate_music": 20,
-    "decrease_heat": 21,
-    "decrease_heat_bedroom": 22,
-    "decrease_heat_kitchen": 23,
-    "decrease_heat_washroom": 24,
-    "decrease_volume": 25,
-    "increase_heat": 26,
-    "increase_heat_bedroom": 27,
-    "increase_heat_kitchen": 28,
-    "increase_heat_washroom": 29,
-    "increase_volume": 30
+    "activate_lamp": 0, "activate_lights": 1, "activate_lights_bedroom": 2, "activate_lights_kitchen": 3,
+    "activate_lights_washroom": 4, "activate_music": 5, "bring_juice": 6, "bring_newspaper": 7,
+    "bring_shoes": 8, "bring_socks": 9, "change language_Chinese": 10, "change language_English": 11,
+    "change language_German": 12, "change language_Korean": 13, "change language_none": 14, "deactivate_lamp": 15,
+    "deactivate_lights": 16, "deactivate_lights_bedroom": 17, "deactivate_lights_kitchen": 18,
+    "deactivate_lights_washroom": 19, "deactivate_music": 20, "decrease_heat": 21, "decrease_heat_bedroom": 22,
+    "decrease_heat_kitchen": 23, "decrease_heat_washroom": 24, "decrease_volume": 25, "increase_heat": 26,
+    "increase_heat_bedroom": 27, "increase_heat_kitchen": 28, "increase_heat_washroom": 29, "increase_volume": 30
 }
 index_to_label = {v: k for k, v in label_map.items()}
 
@@ -84,11 +61,14 @@ st.title("Speech Intent Recognition")
 st.write("Upload an audio file to predict the command.")
 
 # Function to preprocess audio
-def preprocess_audio(audio, sample_rate=16000):
+def preprocess_audio(audio_waveform, sample_rate):
     if sample_rate != 16000:
-        raise ValueError("Audio must have a sample rate of 16kHz.")
-    waveform = torch.tensor(audio, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
-    return waveform.to(device)
+        resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)
+        audio_waveform = resampler(audio_waveform)
+    # Convert stereo to mono if needed
+    if audio_waveform.shape[0] > 1:
+        audio_waveform = torch.mean(audio_waveform, dim=0, keepdim=True)
+    return audio_waveform.to(device)
 
 # Function to predict intent
 def predict_intent(audio_waveform):
@@ -102,18 +82,14 @@ def predict_intent(audio_waveform):
 uploaded_file = st.file_uploader("Upload an audio file", type=["wav", "mp3"])
 if uploaded_file is not None:
     # Save the uploaded file to a temporary location
-    with tempfile.NamedTemporaryFile(delete=False) as temp_audio_file:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
         temp_audio_file.write(uploaded_file.read())
         temp_audio_file_path = temp_audio_file.name
 
-    # Load the audio file
-    audio = AudioSegment.from_file(temp_audio_file_path)
-    audio = audio.set_frame_rate(16000).set_channels(1)  # Ensure 16kHz mono audio
-    audio_samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
-
-    # Preprocess the audio and predict intent
     try:
-        audio_waveform = preprocess_audio(audio_samples, sample_rate=16000)
+        audio_waveform, sample_rate = torchaudio.load(temp_audio_file_path)
+        audio_waveform = preprocess_audio(audio_waveform, sample_rate)
+
         prediction = predict_intent(audio_waveform)
         st.success(f"Predicted Command: {prediction}")
     except Exception as e:
