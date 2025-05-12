@@ -5,11 +5,34 @@ import soundfile as sf
 import tempfile
 import torch
 import torch.nn.functional as F
+import os
+import gdown
 from models.model_wav2vec import Wav2VecIntent  # Import your custom model class
 
-# Load the model
+# Google Drive file ID for the model
+FILE_ID = "1vBjvOY9Ko1aJiWxjj8fCHwJAh2X5gs5n"
 MODEL_PATH = "checkpoints11/wav2vec/wav2vec_best_model.pt"
+
+# Function to download the model from Google Drive
+def download_model_from_drive(file_id, destination):
+    if not os.path.exists(destination):
+        os.makedirs(os.path.dirname(destination), exist_ok=True)
+        url = f"https://drive.google.com/uc?id={file_id}"
+        st.info("Downloading model from Google Drive...")
+        gdown.download(url, destination, quiet=False)
+        st.success("Model downloaded successfully!")
+
+# Download the model if it doesn't exist
+download_model_from_drive(FILE_ID, MODEL_PATH)
+
+# Load the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+num_classes = 31
+pretrained_model = "facebook/wav2vec2-large"
+model = Wav2VecIntent(num_classes=num_classes, pretrained_model=pretrained_model).to(device)
+state_dict = torch.load(MODEL_PATH, map_location=device)
+model.load_state_dict(state_dict)
+model.eval()
 
 # Embedded label map
 label_map = {
@@ -46,14 +69,6 @@ label_map = {
     "increase_volume": 30
 }
 index_to_label = {v: k for k, v in label_map.items()}
-
-# Initialize the model
-num_classes = 31
-pretrained_model = "facebook/wav2vec2-large"
-model = Wav2VecIntent(num_classes=num_classes, pretrained_model=pretrained_model).to(device)
-state_dict = torch.load(MODEL_PATH, map_location=device)
-model.load_state_dict(state_dict)
-model.eval()
 
 st.title("Speech Intent Recognition")
 st.write("Speak into your microphone to predict the command.")
