@@ -35,11 +35,8 @@ def download_model_from_onedrive(url, destination):
     
     try:
         # Convert OneDrive link to direct download link
-        # This approach may need adjustments based on OneDrive's URL structure
         if "1drv.ms" in url:
-            # Get the response from the URL which will redirect
             response = requests.get(url, allow_redirects=True)
-            # Extract the actual file URL
             file_url = response.url.replace("redir", "download")
         else:
             file_url = url
@@ -50,7 +47,19 @@ def download_model_from_onedrive(url, destination):
             with open(destination, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
-            st.success(f"Model downloaded successfully to: {destination}")
+            
+            # Validate the file is a PyTorch model
+            try:
+                # Try to load the first few bytes to check if it's a valid file
+                with open(destination, 'rb') as f:
+                    header = f.read(10)
+                    if b'PK\x03\x04' not in header:  # PyTorch models are zip files
+                        raise ValueError("Downloaded file is not a valid PyTorch model")
+                
+                st.success(f"Model downloaded successfully to: {destination}")
+            except Exception as file_error:
+                os.remove(destination)
+                raise ValueError(f"Downloaded file is not a valid PyTorch model: {str(file_error)}")
         else:
             st.error(f"Failed to download model. Status code: {response.status_code}")
             raise FileNotFoundError(f"HTTP error: {response.status_code}")
