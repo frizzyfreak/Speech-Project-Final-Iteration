@@ -4,12 +4,13 @@ import torch
 import torchaudio
 import tempfile
 import os
-import sounddevice as sd
 import soundfile as sf
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import Wav2Vec2Model, Wav2Vec2FeatureExtractor
 from huggingface_hub import hf_hub_download
+import wave
+import pyaudio
 
 # Set page configuration and styling
 st.set_page_config(page_title="Speech Intent Recognition", layout="wide")
@@ -209,30 +210,46 @@ def process_audio(audio_file_path):
 
 # Function to record audio
 def record_audio(duration=5, sample_rate=16000):
-    """Record audio from microphone"""
+    """Record audio using PyAudio"""
     try:
         st.markdown('<div class="info-box">🎙️ Recording audio... Speak now!</div>', unsafe_allow_html=True)
-        progress_bar = st.progress(0)
         
-        # Create recording with progress bar updates
-        audio = np.zeros((int(duration * sample_rate),), dtype=np.float32)
-        for i in range(10):
-            chunk_duration = duration / 10
-            chunk = sd.rec(
-                int(chunk_duration * sample_rate),
-                samplerate=sample_rate,
-                channels=1,
-                dtype="float32"
-            )
-            sd.wait()
-            start_idx = int(i * chunk_duration * sample_rate)
-            end_idx = int((i + 1) * chunk_duration * sample_rate)
-            audio[start_idx:end_idx] = chunk.squeeze()
-            progress_bar.progress((i + 1) * 10)
-            
-        st.markdown('<div class="success-box">✅ Recording complete!</div>', unsafe_allow_html=True)
-        return audio, sample_rate
-    
+        # PyAudio configuration
+        chunk = 1024  # Record in chunks of 1024 samples
+        format = pyaudio.paInt16  # 16-bit audio format
+        channels = 1  # Mono audio
+        rate = sample_rate  # Sampling rate
+
+        # Initialize PyAudio
+        p = pyaudio.PyAudio()
+
+        # Open a stream for recording
+        stream = p.open(format=format, channels=channels, rate=rate, input=True, frames_per_buffer=chunk)
+
+        frames = []
+
+        # Record audio in chunks
+        for _ in range(0, int(rate / chunk * duration)):
+            data = stream.read(chunk)
+            frames.append(data)
+
+        # Stop and close the stream
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+        # Save the audio to a temporary file
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio:
+            wf = wave.open(temp_audio.name, 'wb')
+            wf.setnchannels(channels)
+            wf.setsampwidth(p.get_sample_size(format))
+            wf.setframerate(rate)
+            wf.writeframes(b''.join(frames))
+            wf.close()
+
+            st.markdown('<div class="success-box">✅ Recording complete!</div>', unsafe_allow_html=True)
+            return temp_audio.name, rate
+
     except Exception as e:
         st.error(f"Error recording audio: {str(e)}")
         return None, None
@@ -247,29 +264,25 @@ with col1:
     
     # Record button
     if st.button("🎙️ Record", type="primary", use_container_width=True):
-        audio_data, sample_rate = record_audio(duration)
+        audio_file_path, sample_rate = record_audio(duration)
         
-        if audio_data is not None:
-            # Save audio to temporary file
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio:
-                sf.write(temp_audio.name, audio_data, sample_rate)
+        if audio_file_path is not None:
+            # Display the audio player
+            st.audio(audio_file_path, format="audio/wav")
                 
-                # Display the audio player
-                st.audio(temp_audio.name, format="audio/wav")
+            # Process the audio
+            with st.spinner("Processing audio..."):
+                intent, confidence = process_audio(audio_file_path)
                 
-                # Process the audio
-                with st.spinner("Processing audio..."):
-                    intent, confidence = process_audio(temp_audio.name)
-                
-                if intent:
-                    # Display result with nice formatting
-                    st.markdown(f"""
-                    <div class="success-box">
-                        <h3>🎯 Predicted Intent:</h3>
-                        <h2 style="color:#1E88E5">{intent}</h2>
-                        <p>Confidence: {confidence:.2f}%</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+            if intent:
+                # Display result with nice formatting
+                st.markdown(f"""
+                <div class="success-box">
+                    <h3>🎯 Predicted Intent:</h3>
+                    <h2 style="color:#1E88E5">{intent}</h2>
+                    <p>Confidence: {confidence:.2f}%</p>
+                </div>
+                """, unsafe_allow_html=True)
 
 with col2:
     st.markdown('<h2 class="sub-header">Option 2: Upload Audio</h2>', unsafe_allow_html=True)
