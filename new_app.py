@@ -208,84 +208,11 @@ def process_audio(audio_file_path):
         st.error(f"Error processing audio: {str(e)}")
         return None, None
 
-# Function to record audio
-def record_audio(duration=5, sample_rate=16000):
-    """Record audio using PyAudio"""
-    try:
-        st.markdown('<div class="info-box">🎙️ Recording audio... Speak now!</div>', unsafe_allow_html=True)
-        
-        # PyAudio configuration
-        chunk = 1024  # Record in chunks of 1024 samples
-        format = pyaudio.paInt16  # 16-bit audio format
-        channels = 1  # Mono audio
-        rate = sample_rate  # Sampling rate
-
-        # Initialize PyAudio
-        p = pyaudio.PyAudio()
-
-        # Open a stream for recording
-        stream = p.open(format=format, channels=channels, rate=rate, input=True, frames_per_buffer=chunk)
-
-        frames = []
-
-        # Record audio in chunks
-        for _ in range(0, int(rate / chunk * duration)):
-            data = stream.read(chunk)
-            frames.append(data)
-
-        # Stop and close the stream
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-
-        # Save the audio to a temporary file
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio:
-            wf = wave.open(temp_audio.name, 'wb')
-            wf.setnchannels(channels)
-            wf.setsampwidth(p.get_sample_size(format))
-            wf.setframerate(rate)
-            wf.writeframes(b''.join(frames))
-            wf.close()
-
-            st.markdown('<div class="success-box">✅ Recording complete!</div>', unsafe_allow_html=True)
-            return temp_audio.name, rate
-
-    except Exception as e:
-        st.error(f"Error recording audio: {str(e)}")
-        return None, None
-
 # Create two columns
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown('<h2 class="sub-header">Option 1: Record Audio</h2>', unsafe_allow_html=True)
-    # Recording parameters
-    duration = st.slider("Recording Duration (seconds)", min_value=2, max_value=10, value=5)
-    
-    # Record button
-    if st.button("🎙️ Record", type="primary", use_container_width=True):
-        audio_file_path, sample_rate = record_audio(duration)
-        
-        if audio_file_path is not None:
-            # Display the audio player
-            st.audio(audio_file_path, format="audio/wav")
-                
-            # Process the audio
-            with st.spinner("Processing audio..."):
-                intent, confidence = process_audio(audio_file_path)
-                
-            if intent:
-                # Display result with nice formatting
-                st.markdown(f"""
-                <div class="success-box">
-                    <h3>🎯 Predicted Intent:</h3>
-                    <h2 style="color:#1E88E5">{intent}</h2>
-                    <p>Confidence: {confidence:.2f}%</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-with col2:
-    st.markdown('<h2 class="sub-header">Option 2: Upload Audio</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="sub-header">Option 1: Upload Audio</h2>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload an audio file", type=["wav", "mp3", "ogg"])
     
     if uploaded_file is not None:
@@ -309,6 +236,10 @@ with col2:
                     <p>Confidence: {confidence:.2f}%</p>
                 </div>
                 """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown('<h2 class="sub-header">Option 2: Record Audio (Coming Soon)</h2>', unsafe_allow_html=True)
+    st.info("Audio recording directly in the browser is not yet supported. Please use the upload option.")
 
 # Display information about the model and available commands
 with st.expander("ℹ️ About this app"):
