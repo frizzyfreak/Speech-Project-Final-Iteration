@@ -3,14 +3,11 @@ import numpy as np
 import torch
 import torchaudio
 import tempfile
-import os
 import soundfile as sf
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import Wav2Vec2Model, Wav2Vec2FeatureExtractor
 from huggingface_hub import hf_hub_download
-import wave
-import pyaudio
 
 # Set page configuration and styling
 st.set_page_config(page_title="Speech Intent Recognition", layout="wide")
