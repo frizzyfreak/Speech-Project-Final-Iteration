@@ -3,9 +3,9 @@ import numpy as np
 import torch
 import torchaudio
 import tempfile
-import base64
 from transformers import Wav2Vec2Model, Wav2Vec2FeatureExtractor
 from huggingface_hub import hf_hub_download
+from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
 
 # Set page configuration and styling
 st.set_page_config(page_title="Speech Intent Recognition", layout="wide")
@@ -120,56 +120,22 @@ def process_audio(audio_file_path):
         st.error(f"Error processing audio: {str(e)}")
         return None, None
 
-# JavaScript-based audio recorder
-st.markdown("""
-    <script>
-        let mediaRecorder;
-        let audioChunks = [];
-        function startRecording() {
-            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.start();
-                mediaRecorder.ondataavailable = event => {
-                    audioChunks.push(event.data);
-                };
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    const reader = new FileReader();
-                    reader.readAsDataURL(audioBlob);
-                    reader.onloadend = () => {
-                        const base64data = reader.result.split(',')[1];
-                        fetch('/upload', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ audio: base64data })
-                        }).then(response => response.json()).then(data => {
-                            Streamlit.setComponentValue(data.audio_url);
-                        });
-                    };
-                };
-            });
-        }
-        function stopRecording() {
-            mediaRecorder.stop();
-        }
-    </script>
-    <button onclick="startRecording()">Start Recording</button>
-    <button onclick="stopRecording()">Stop Recording</button>
-""", unsafe_allow_html=True)
+# Audio recording using streamlit-webrtc
+class AudioProcessor(AudioProcessorBase):
+    def recv(self, frame):
+        audio_data = frame.to_ndarray()
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio:
+            torchaudio.save(temp_audio.name, torch.tensor(audio_data).unsqueeze(0), 16000)
+            st.audio(temp_audio.name, format="audio/wav")
+            with st.spinner("Processing audio..."):
+                intent, confidence = process_audio(temp_audio.name)
+            if intent:
+                st.markdown(f"""
+                <div class="success-box">
+                    <h3>🎯 Predicted Intent:</h3>
+                    <h2 style="color:#1E88E5">{intent}</h2>
+                    <p>Confidence: {confidence:.2f}%</p>
+                </div>
+                """, unsafe_allow_html=True)
 
-# Audio upload and processing
-uploaded_file = st.file_uploader("Upload an audio file", type=["wav", "mp3", "ogg"])
-if uploaded_file:
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio:
-        temp_audio.write(uploaded_file.read())
-        st.audio(temp_audio.name, format="audio/wav")
-        with st.spinner("Processing audio..."):
-            intent, confidence = process_audio(temp_audio.name)
-        if intent:
-            st.markdown(f"""
-            <div class="success-box">
-                <h3>🎯 Predicted Intent:</h3>
-                <h2 style="color:#1E88E5">{intent}</h2>
-                <p>Confidence: {confidence:.2f}%</p>
-            </div>
-            """, unsafe_allow_html=True)
+webrtc_streamer(key="audio", audio_processor_factory=AudioProcessor)
