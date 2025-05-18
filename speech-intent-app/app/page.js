@@ -36,6 +36,11 @@ export default function Home() {
   };
 
   const sendAudio = async (blob) => {
+    if (!blob || !(blob instanceof Blob)) {
+      setPrediction("No audio to send.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setPrediction("");
     const formData = new FormData();
@@ -74,7 +79,7 @@ export default function Home() {
         <div className="mb-4">
           <audio src={audioUrl} controls />
           <button
-            onClick={sendAudio}
+            onClick={() => sendAudio(audioBlob)}
             className="bg-green-500 text-white px-4 py-2 rounded ml-2"
             disabled={loading}
           >
