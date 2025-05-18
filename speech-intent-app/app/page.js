@@ -1,6 +1,5 @@
 "use client";
 import { useRef, useState } from "react";
-import { Client } from "@gradio/client";
 
 export default function Home() {
   const [recording, setRecording] = useState(false);
