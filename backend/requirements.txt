@@ -1,9 +1,8 @@
-flask
+fastapi
 torch
 soundfile
 huggingface_hub
 transformers
 gunicorn
 numpy
-pandas
-scipy
+uvicorn

@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify
-import torch
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import JSONResponse
 from models.model_wav2vec import Wav2VecIntent
-import soundfile as sf
 from huggingface_hub import hf_hub_download
+import torch
+import soundfile as sf
 
-app = Flask(__name__)
+app = FastAPI()
 
 # Download model from Hugging Face
 MODEL_PATH = hf_hub_download(repo_id="avi292423/speech-intent-recognition-project", filename="wav2vec_best_model.pt")
@@ -23,24 +24,23 @@ label_map = {
 index_to_label = {v: k for k, v in label_map.items()}
 
 num_classes = 31
-pretrained_model = "facebook/wav2vec2-large"
+pretrained_model = "facebook/wav2vec2-base"  # Use base for less RAM, or keep large if needed
 model = Wav2VecIntent(num_classes=num_classes, pretrained_model=pretrained_model).to(device)
 state_dict = torch.load(MODEL_PATH, map_location=device)
 model.load_state_dict(state_dict)
 model.eval()
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    audio_file = request.files['file']
-    audio, sample_rate = sf.read(audio_file)
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)):
+    audio_bytes = await file.read()
+    with open("temp.wav", "wb") as f:
+        f.write(audio_bytes)
+    audio, sample_rate = sf.read("temp.wav")
     if sample_rate != 16000:
-        return jsonify({"error": "Audio must have a sample rate of 16kHz."}), 400
+        return JSONResponse({"error": "Audio must have a sample rate of 16kHz."}, status_code=400)
     waveform = torch.tensor(audio, dtype=torch.float32).unsqueeze(0).to(device)
     with torch.no_grad():
         output = model(waveform)
         predicted_class = torch.argmax(output, dim=1).item()
         predicted_label = index_to_label.get(predicted_class, "Unknown Class")
-    return jsonify({"prediction": predicted_label})
-
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8000)
+    return {"prediction": predicted_label}
