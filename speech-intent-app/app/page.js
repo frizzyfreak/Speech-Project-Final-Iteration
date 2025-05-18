@@ -40,11 +40,18 @@ export default function Home() {
     setLoading(true);
     setPrediction("");
     try {
-      // Connect to your Space
-      const client = await Client.connect("avi292423/Speech-Intent-Recognition");
-      // Use the Gradio API to predict
-      const result = await client.predict("/predict", { audio: blob });
-      setPrediction(result.data || "No prediction");
+      const formData = new FormData();
+      formData.append("audio", blob, "audio.wav");
+
+      const res = await fetch(
+        "https://avi292423-speech-intent-recognition.hf.space/api/predict/",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const data = await res.json();
+      setPrediction(data.data ? data.data[0] : data.error || "No prediction");
     } catch (err) {
       setPrediction("Error: " + err.message);
     }
