@@ -77,13 +77,13 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate Wav2Vec intent recognition model")
     
     # Model arguments
-    parser.add_argument('--model', type=str, default="checkpoints10/wav2vec/wav2vec_best_model.pt", 
+    parser.add_argument('--model', type=str, default="checkpoints11/wav2vec/wav2vec_best_model.pt", 
                         help='Path to model checkpoint')
-    parser.add_argument('--label_map', type=str, default="data/processed2/label_map.json", 
+    parser.add_argument('--label_map', type=str, default="data/processed/label_map.json", 
                         help='Path to label map JSON')
     
     # Dataset arguments
-    parser.add_argument('--test_csv', type=str, default="synthetic/filtered_csv_file.csv",
+    parser.add_argument('--test_csv', type=str, default="data/processed/test_data.csv",
                         help='Path to test CSV file')
     parser.add_argument('--batch_size', type=int, default=4, help='Batch size for evaluation')
     
@@ -114,11 +114,10 @@ def main():
         test_dataset,
         batch_size=args.batch_size,
         shuffle=False,
-        collate_fn=lambda batch: custom_collate(batch),
-        num_workers=4,
+        collate_fn=custom_collate,
+        num_workers=0,
         pin_memory=True
     )
-    
     # Evaluate the model
     logger.info("Evaluating the model...")
     accuracy, report = evaluate(model, test_loader, label_map, device)
