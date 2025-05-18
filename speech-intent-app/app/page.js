@@ -40,7 +40,7 @@ export default function Home() {
     setLoading(true);
     const formData = new FormData();
     formData.append("file", audioBlob, "audio.wav");
-    const res = await fetch("https://YOUR-BACKEND-URL/predict", {
+    const res = await fetch("https://speech-project-final-iteration.onrender.com/predict", {
       method: "POST",
       body: formData,
     });

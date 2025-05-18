@@ -2,4 +2,8 @@ flask
 torch
 soundfile
 huggingface_hub
+transformers
 gunicorn
+numpy
+pandas
+scipy
