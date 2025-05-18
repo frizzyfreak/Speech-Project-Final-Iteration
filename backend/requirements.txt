@@ -6,3 +6,4 @@ transformers
 gunicorn
 numpy
 uvicorn
+gradio

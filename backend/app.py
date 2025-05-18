@@ -4,6 +4,8 @@ from models.model_wav2vec import Wav2VecIntent
 from huggingface_hub import hf_hub_download
 import torch
 import soundfile as sf
+import gradio as gr
+import numpy as np
 
 app = FastAPI()
 
@@ -44,3 +46,28 @@ async def predict(file: UploadFile = File(...)):
         predicted_class = torch.argmax(output, dim=1).item()
         predicted_label = index_to_label.get(predicted_class, "Unknown Class")
     return {"prediction": predicted_label}
+
+def predict_intent(audio):
+    if audio is None:
+        return "No audio provided."
+    # Gradio provides (sample_rate, numpy array)
+    sr, y = audio
+    if sr != 16000:
+        return "Audio must have a sample rate of 16kHz."
+    waveform = torch.tensor(y, dtype=torch.float32).unsqueeze(0).to(device)
+    with torch.no_grad():
+        output = model(waveform)
+        predicted_class = torch.argmax(output, dim=1).item()
+        predicted_label = index_to_label.get(predicted_class, "Unknown Class")
+    return predicted_label
+
+demo = gr.Interface(
+    fn=predict_intent,
+    inputs=gr.Audio(source="microphone", type="numpy", label="Record or Upload Audio (16kHz WAV)"),
+    outputs=gr.Textbox(label="Predicted Intent"),
+    title="Speech Intent Recognition",
+    description="Record or upload a 16kHz WAV audio file to predict the intent."
+)
+
+if __name__ == "__main__":
+    demo.launch()
