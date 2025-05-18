@@ -27,7 +27,7 @@ label_map = {
 index_to_label = {v: k for k, v in label_map.items()}
 
 num_classes = 31
-pretrained_model = "facebook/wav2vec2-base"  # Use base for less RAM, or keep large if needed
+pretrained_model = "facebook/wav2vec2-large"  # Use base for less RAM, or keep large if needed
 model = Wav2VecIntent(num_classes=num_classes, pretrained_model=pretrained_model).to(device)
 state_dict = torch.load(MODEL_PATH, map_location=device)
 model.load_state_dict(state_dict)
@@ -65,7 +65,7 @@ def predict_intent(audio):
 
 demo = gr.Interface(
     fn=predict_intent,
-    inputs=gr.Audio(source="microphone", type="numpy", label="Record or Upload Audio (16kHz WAV)"),
+    inputs=gr.Audio(type="numpy", label="Record or Upload Audio (16kHz WAV)"),
     outputs=gr.Textbox(label="Predicted Intent"),
     title="Speech Intent Recognition",
     description="Record or upload a 16kHz WAV audio file to predict the intent."
