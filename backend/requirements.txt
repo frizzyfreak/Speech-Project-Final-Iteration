@@ -2,3 +2,4 @@ flask
 torch
 soundfile
 huggingface_hub
+gunicorn
