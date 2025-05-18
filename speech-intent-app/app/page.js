@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { Client } from "@gradio/client";
 
 export default function Home() {
   const [recording, setRecording] = useState(false);
@@ -36,21 +37,17 @@ export default function Home() {
   };
 
   const sendAudio = async (blob) => {
-    if (!blob || !(blob instanceof Blob)) {
-      setPrediction("No audio to send.");
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setPrediction("");
-    const formData = new FormData();
-    formData.append("file", blob, "audio.wav");
-    const res = await fetch("https://avi292423-speech-intent-recognition.hf.space/predict", {
-      method: "POST",
-      body: formData,
-    });
-    const data = await res.json();
-    setPrediction(data.prediction || data.error || "No prediction");
+    try {
+      // Connect to your Space
+      const client = await Client.connect("avi292423/Speech-Intent-Recognition");
+      // Use the Gradio API to predict
+      const result = await client.predict("/predict", { audio: blob });
+      setPrediction(result.data || "No prediction");
+    } catch (err) {
+      setPrediction("Error: " + err.message);
+    }
     setLoading(false);
   };
 
