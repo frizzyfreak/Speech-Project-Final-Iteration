@@ -39,14 +39,27 @@ export default function Home() {
     setLoading(true);
     setPrediction("");
     try {
-      const formData = new FormData();
-      formData.append("audio", blob, "audio.wav");
+      // Convert blob to base64
+      const arrayBuffer = await blob.arrayBuffer();
+      const base64Audio = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+      );
+
+      const payload = {
+        data: [
+          {
+            name: "audio.wav",
+            data: base64Audio,
+          },
+        ],
+      };
 
       const res = await fetch(
-        "https://avi292423-speech-intent-recognition.hf.space/api/predict/",
+        "https://avi292423-speech-intent-recognition.hf.space/run/predict",
         {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         }
       );
       const data = await res.json();
