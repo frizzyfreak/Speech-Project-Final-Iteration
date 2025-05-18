@@ -7,3 +7,4 @@ gunicorn
 numpy
 uvicorn
 gradio
+librosa

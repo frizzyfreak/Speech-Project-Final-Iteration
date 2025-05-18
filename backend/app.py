@@ -6,6 +6,7 @@ import torch
 import soundfile as sf
 import gradio as gr
 import numpy as np
+import librosa
 
 app = FastAPI()
 
@@ -50,10 +51,11 @@ async def predict(file: UploadFile = File(...)):
 def predict_intent(audio):
     if audio is None:
         return "No audio provided."
-    # Gradio provides (sample_rate, numpy array)
     sr, y = audio
     if sr != 16000:
-        return "Audio must have a sample rate of 16kHz."
+        # Resample to 16kHz
+        y = librosa.resample(y.astype(float), orig_sr=sr, target_sr=16000)
+        sr = 16000
     waveform = torch.tensor(y, dtype=torch.float32).unsqueeze(0).to(device)
     with torch.no_grad():
         output = model(waveform)

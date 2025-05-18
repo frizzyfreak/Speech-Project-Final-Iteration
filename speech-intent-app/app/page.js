@@ -35,12 +35,12 @@ export default function Home() {
     setRecording(false);
   };
 
-  const sendAudio = async () => {
-    if (!audioBlob) return;
+  const sendAudio = async (blob) => {
     setLoading(true);
+    setPrediction("");
     const formData = new FormData();
-    formData.append("file", audioBlob, "audio.wav");
-    const res = await fetch("https://speech-project-final-iteration.onrender.com/predict", {
+    formData.append("file", blob, "audio.wav");
+    const res = await fetch("https://avi292423-speech-intent-recognition.hf.space/predict", {
       method: "POST",
       body: formData,
     });
