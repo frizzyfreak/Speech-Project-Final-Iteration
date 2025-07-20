@@ -8,7 +8,7 @@ A deep learning project for real-time speech intent classification using a fine-
 
 ---
 
-### *[LIVE LINK - ]**[Try the Live Demo on Hugging Face Spaces!](https://huggingface.co/spaces/Frizzyfreak/Speech-Intent-Recognition)*
+### **[LIVE LINK - ]** **[Try the Live Demo on Hugging Face Spaces!](https://huggingface.co/spaces/Frizzyfreak/Speech-Intent-Recognition)*
 
 ---
 
