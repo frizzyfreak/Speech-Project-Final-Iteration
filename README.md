@@ -55,7 +55,7 @@ The confusion matrix shows a strong diagonal, indicating very few misclassificat
 ### F1 Score per Class
 -1 score is one of the common measures to rate how successful a classifier is. It’s the harmonic mean of two other metrics, namely: precision and recall. In a binary classification problem, the formula is:
 
-  \[\textrm{F-1 Score} = \frac{2 \times \textrm{Precision} \times \textrm{Recall}}{\textrm{Precision} + \textrm{Recall}}\]
+<img width="403" height="68" alt="image" src="https://github.com/user-attachments/assets/2404fcc7-d068-4cdc-9c74-dfa9abb281c2" />
 
 ![F1 Score](./output/f1_score_per_class.png)
 
