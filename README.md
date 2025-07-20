@@ -50,7 +50,7 @@ High accuracy is maintained across all individual classes, showcasing the model'
 ### Confusion Matrix
 The confusion matrix shows a strong diagonal, indicating very few misclassifications between intents. Most minor confusions occur between acoustically similar commands.
 
-![Confusion Matrix](confusion_matrix.png)
+![Confusion Matrix](./output/confusion_matrix.png)
 
 ### F1 Score per Class
 -1 score is one of the common measures to rate how successful a classifier is. It’s the harmonic mean of two other metrics, namely: precision and recall. In a binary classification problem, the formula is:
