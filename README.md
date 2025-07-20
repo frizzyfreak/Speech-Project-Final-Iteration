@@ -25,7 +25,7 @@ A deep learning project for real-time speech intent classification using a fine-
 
 The project follows a modular deep learning pipeline, from data preparation to real-time inference. The core of the system is a `Wav2Vec2.0` model fine-tuned for the specific task of intent classification.
 
-![Deep Learning Pipeline]<img width="866" height="421" alt="Image" src="https://github.com/user-attachments/assets/623d8dce-6155-4f20-a92c-9bb8afa1e6aa" />
+<img width="1559" height="758" alt="Image" src="https://github.com/user-attachments/assets/7b851f50-13e4-4e91-9406-a699346a52c1" />
 
 1.  **Data Preparation:** Audio from the Fluent Speech Commands dataset is loaded, resampled to 16kHz, and augmented.
 2.  **Model Architecture:** A pre-trained `Wav2Vec2.0` model is used as the backbone. A custom classification head with Layer Normalization, an Attention mechanism, and a final Linear layer is added for intent prediction.
