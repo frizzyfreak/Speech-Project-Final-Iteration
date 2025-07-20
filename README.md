@@ -8,11 +8,11 @@ A deep learning project for real-time speech intent classification using a fine-
 
 ---
 
-### 🎤 **[Try the Live Demo on Hugging Face Spaces!](https://huggingface.co/spaces/Frizzyfreak/Speech-Intent-Recognition)** 🚀
+### *[Try the Live Demo on Hugging Face Spaces!](https://huggingface.co/spaces/Frizzyfreak/Speech-Intent-Recognition)*
 
 ---
 
-## 🌟 Key Features
+##  Key Features
 
 * **End-to-End Learning:** Classifies user intent directly from raw audio waveforms, eliminating the need for an intermediate transcription step.
 * **High Accuracy:** Achieves **98.84%** accuracy on the Fluent Speech Commands dataset.
@@ -21,11 +21,10 @@ A deep learning project for real-time speech intent classification using a fine-
 * **Interactive Web UI:** Deployed with a user-friendly Gradio interface on Hugging Face Spaces.
 * **31 Command Intents:** Trained to recognize 31 unique intents for smart home and device control.
 
-## ⚙️ Methodology & Architecture
+##  Methodology & Architecture
 
 The project follows a modular deep learning pipeline, from data preparation to real-time inference. The core of the system is a `Wav2Vec2.0` model fine-tuned for the specific task of intent classification.
 
-![Deep Learning Pipeline](https://i.imgur.com/uCGRd3m.png)
 
 1.  **Data Preparation:** Audio from the Fluent Speech Commands dataset is loaded, resampled to 16kHz, and augmented.
 2.  **Model Architecture:** A pre-trained `Wav2Vec2.0` model is used as the backbone. A custom classification head with Layer Normalization, an Attention mechanism, and a final Linear layer is added for intent prediction.
@@ -33,7 +32,7 @@ The project follows a modular deep learning pipeline, from data preparation to r
 4.  **Evaluation:** Performance is measured using accuracy, precision, recall, and F1-score on a held-out test set.
 5.  **Real-Time Inference:** The trained model is deployed to predict intent from live microphone input.
 
-## 📊 Performance & Results
+##  Performance & Results
 
 The model demonstrates excellent and consistent performance across all 31 intent classes.
 
@@ -61,7 +60,7 @@ The confusion matrix shows a strong diagonal, indicating very few misclassificat
 | Macro Average Recall    | 0.99   |
 | Macro Average F1-Score  | 0.99   |
 
-## 🚀 Getting Started
+## Getting Started
 
 To run this project locally, follow these steps:
 
@@ -92,7 +91,7 @@ To run this project locally, follow these steps:
         python evaluate_wav2vec.py
         ```
 
-## 📚 Dataset
+##  Dataset
 
 This project uses the **Fluent Speech Commands (FSC)** dataset, which contains over 30,000 English utterances designed for spoken language understanding. Each command is annotated with an `action`, `object`, and `location`. For this project, these combinations were mapped to 31 unique intent classes.
 
@@ -105,13 +104,13 @@ This project uses the **Fluent Speech Commands (FSC)** dataset, which contains o
 * **Arnav Khanduja**
 
 
-## 🔭 Future Work
+##  Future Work
 
 -   Expand the model to cover a broader range of intents and languages.
 -   Improve robustness in noisy environments and with multiple speakers.
 -   Optimize for lower latency using techniques like model quantization.
 -   Integrate with real-world APIs to execute the recognized commands (e.g., smart home APIs).
 
-## 📜 License
+##  License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
