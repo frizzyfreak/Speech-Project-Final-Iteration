@@ -25,15 +25,13 @@ A deep learning project for real-time speech intent classification using a fine-
 
 The project follows a modular deep learning pipeline, from data preparation to real-time inference. The core of the system is a `Wav2Vec2.0` model fine-tuned for the specific task of intent classification.
 
+![Deep Learning Pipeline]<img width="866" height="421" alt="Image" src="https://github.com/user-attachments/assets/623d8dce-6155-4f20-a92c-9bb8afa1e6aa" />
 
 1.  **Data Preparation:** Audio from the Fluent Speech Commands dataset is loaded, resampled to 16kHz, and augmented.
 2.  **Model Architecture:** A pre-trained `Wav2Vec2.0` model is used as the backbone. A custom classification head with Layer Normalization, an Attention mechanism, and a final Linear layer is added for intent prediction.
 3.  **Training Strategy:** The model is trained using the AdamW optimizer, a dynamic learning rate scheduler, and early stopping to prevent overfitting.
 4.  **Evaluation:** Performance is measured using accuracy, precision, recall, and F1-score on a held-out test set.
 5.  **Real-Time Inference:** The trained model is deployed to predict intent from live microphone input.
-##  Pipeline
-
-<img width="866" height="421" alt="Image" src="https://github.com/user-attachments/assets/623d8dce-6155-4f20-a92c-9bb8afa1e6aa" />
 
 ##  Performance & Results
 
@@ -42,17 +40,29 @@ The model demonstrates excellent and consistent performance across all 31 intent
 ### Training & Validation Accuracy
 The model converges quickly and generalizes well, with both training and validation accuracy reaching ~98% without signs of overfitting.
 
-![Training and Validation Accuracy](./output/accuracy_per_class.png)
+![Training and Validation Accuracy](./output/accuracy_plot.png)
 
 ### Accuracy Per Class
 High accuracy is maintained across all individual classes, showcasing the model's robustness.
 
-![Accuracy per Class](https://i.imgur.com/u0b1M4B.png)
+![Accuracy per Class](./output/accuracy_per_class.png)
 
 ### Confusion Matrix
 The confusion matrix shows a strong diagonal, indicating very few misclassifications between intents. Most minor confusions occur between acoustically similar commands.
 
-![Confusion Matrix](https://i.imgur.com/Q9E1K7X.png)
+![Confusion Matrix](confusion_matrix.png)
+
+### F1 Score per Class
+-1 score is one of the common measures to rate how successful a classifier is. It’s the harmonic mean of two other metrics, namely: precision and recall. In a binary classification problem, the formula is:
+
+  \[\textrm{F-1 Score} = \frac{2 \times \textrm{Precision} \times \textrm{Recall}}{\textrm{Precision} + \textrm{Recall}}\]
+
+![F1 Score](./output/f1_score_per_class.png)
+
+### Accuracy Evaluation 
+
+![Accuracy Evaluation Metrics](./output/accuracy_evaluation.png)
+
 
 ### Overall Performance Metrics
 
