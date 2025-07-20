@@ -42,7 +42,7 @@ The model demonstrates excellent and consistent performance across all 31 intent
 ### Training & Validation Accuracy
 The model converges quickly and generalizes well, with both training and validation accuracy reaching ~98% without signs of overfitting.
 
-![Training and Validation Accuracy](.\output\accuracy_per_class.png)
+![Training and Validation Accuracy](./output/accuracy_per_class.png)
 
 ### Accuracy Per Class
 High accuracy is maintained across all individual classes, showcasing the model's robustness.
