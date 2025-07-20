@@ -31,6 +31,9 @@ The project follows a modular deep learning pipeline, from data preparation to r
 3.  **Training Strategy:** The model is trained using the AdamW optimizer, a dynamic learning rate scheduler, and early stopping to prevent overfitting.
 4.  **Evaluation:** Performance is measured using accuracy, precision, recall, and F1-score on a held-out test set.
 5.  **Real-Time Inference:** The trained model is deployed to predict intent from live microphone input.
+##  Pipeline
+
+<img width="866" height="421" alt="Image" src="https://github.com/user-attachments/assets/623d8dce-6155-4f20-a92c-9bb8afa1e6aa" />
 
 ##  Performance & Results
 
@@ -39,7 +42,7 @@ The model demonstrates excellent and consistent performance across all 31 intent
 ### Training & Validation Accuracy
 The model converges quickly and generalizes well, with both training and validation accuracy reaching ~98% without signs of overfitting.
 
-![Training and Validation Accuracy](https://i.imgur.com/7g5Xk2h.png)
+![Training and Validation Accuracy](C:\Users\Hemant\Desktop\Speech-Project-Final-Iteration\output\accuracy_per_class.png)
 
 ### Accuracy Per Class
 High accuracy is maintained across all individual classes, showcasing the model's robustness.
